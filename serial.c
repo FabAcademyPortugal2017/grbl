@@ -21,9 +21,29 @@
 /* This code was initially inspired by the wiring_serial module by David A. Mellis which
    used to be a part of the Arduino project. */ 
 
+#include "config.h"
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include "serial.h"
+
+#ifdef __AVR_AT90USB1286__
+#include "usb_serial/usb_serial.h"
+void serial_init(long baud)
+{
+  usb_init();
+}
+
+void serial_write(uint8_t data)
+{
+  usb_serial_putchar(data);
+}
+
+uint8_t serial_read()
+{
+  return usb_serial_getchar();
+}
+
+#else
 
 
 #ifdef __AVR_ATmega328P__
@@ -123,3 +143,4 @@ ISR(USART_RX_vect)
     rx_buffer_head = next_head;
   }
 }
+#endif // __AVR_AT90USB1286__
