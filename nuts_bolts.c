@@ -19,6 +19,7 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include "nuts_bolts.h"
 #include <stdint.h>
 #include <stdlib.h>

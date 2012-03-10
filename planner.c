@@ -21,6 +21,7 @@
 
 /* The ring buffer implementation gleaned from the wiring_serial library by David A. Mellis. */
 
+#include "config.h"
 #include <inttypes.h>
 #include <math.h>       
 #include <stdlib.h>
@@ -29,7 +30,7 @@
 #include "nuts_bolts.h"
 #include "stepper.h"
 #include "settings.h"
-#include "config.h"
+//#include "config.h"
 
 // The number of linear motions that can be in the plan at any give time
 #ifdef __AVR_ATmega328P__

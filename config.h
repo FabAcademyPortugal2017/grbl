@@ -22,6 +22,13 @@
 #ifndef config_h
 #define config_h
 
+#define PRINTRBOARD
+
+#define  HardwareSerial_h // trick to disable the standard HWserial
+
+//#define  FORCE_INLINE __attribute__((always_inline)) inline
+
+
 // IMPORTANT: Any changes here requires a full re-compiling of the source code to propagate them.
 
 #define BAUD_RATE 9600
@@ -29,6 +36,26 @@
 // Updated default pin-assignments from 0.6 onwards 
 // (see bottom of file for a copy of the old config)
 
+#ifdef PRINTRBOARD
+#define X_DISABLE_DDR      DDRE
+#define X_DISABLE_PORT     PORTE
+#define X_DISABLE_BIT      7
+#define Y_DISABLE_DDR      DDRE
+#define Y_DISABLE_PORT     PORTE
+#define Y_DISABLE_BIT      6
+#define Z_DISABLE_DDR      DDRC
+#define Z_DISABLE_PORT     PORTC
+#define Z_DISABLE_BIT      7
+
+#define STEPPING_DDR       DDRA
+#define STEPPING_PORT      PORTA
+#define X_STEP_BIT           0
+#define Y_STEP_BIT           2
+#define Z_STEP_BIT           4
+#define X_DIRECTION_BIT      1
+#define Y_DIRECTION_BIT      3
+#define Z_DIRECTION_BIT      5
+#else
 #define STEPPERS_DISABLE_DDR     DDRB
 #define STEPPERS_DISABLE_PORT    PORTB
 #define STEPPERS_DISABLE_BIT         0
@@ -41,6 +68,7 @@
 #define X_DIRECTION_BIT      5
 #define Y_DIRECTION_BIT      6
 #define Z_DIRECTION_BIT      7
+#endif // PRINTRBOARD
 
 #define LIMIT_DDR      DDRB
 #define LIMIT_PIN     PINB

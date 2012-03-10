@@ -19,13 +19,13 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <avr/io.h>
 #include "protocol.h"
 #include "gcode.h"
 #include "serial.h"
 #include "print.h"
 #include "settings.h"
-#include "config.h"
 #include <math.h>
 #include "nuts_bolts.h"
 #include <avr/pgmspace.h>

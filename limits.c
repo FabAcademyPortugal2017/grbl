@@ -18,6 +18,7 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
   
+#include "config.h"
 #include <util/delay.h>
 #include <avr/io.h>
 #include "stepper.h"

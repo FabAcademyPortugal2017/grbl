@@ -27,10 +27,12 @@
 #                is connected.
 # FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
-DEVICE     = atmega328p
+#scl DEVICE     = atmega328p
+#scl PROGRAMMER = -c avrisp2 -P usb
+DEVICE     = at90usb1286
+PROGRAMMER = -c avr109 -P COM16
 CLOCK      = 16000000
-PROGRAMMER = -c avrisp2 -P usb
-OBJECTS    = main.o motion_control.o gcode.o spindle_control.o serial.o protocol.o stepper.o \
+OBJECTS    = usb_serial/usb_serial.o main.o motion_control.o gcode.o spindle_control.o serial.o protocol.o stepper.o \
              eeprom.o settings.o planner.o nuts_bolts.o limits.o print.o
 # FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
 FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
@@ -81,7 +83,7 @@ main.elf: $(OBJECTS)
 grbl.hex: main.elf
 	rm -f grbl.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf grbl.hex
-	avr-objdump -h main.elf | grep .bss | ruby -e 'puts "\n\n--- Requires %s bytes of SRAM" % STDIN.read.match(/0[0-9a-f]+\s/)[0].to_i(16)'
+#scl	avr-objdump -h main.elf | grep .bss | ruby -e 'puts "\n\n--- Requires %s bytes of SRAM" % STDIN.read.match(/0[0-9a-f]+\s/)[0].to_i(16)'
 	avr-size *.hex *.elf *.o
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.

@@ -22,8 +22,8 @@
 /* The timer calculations of this module informed by the 'RepRap cartesian firmware' by Zack Smith
    and Philipp Tiefenbacher. */
 
-#include "stepper.h"
 #include "config.h"
+#include "stepper.h"
 #include "settings.h"
 #include <math.h>
 #include <stdlib.h>
@@ -84,7 +84,13 @@ static void st_wake_up()
   // Initialize stepper output bits
   out_bits = (0) ^ (settings.invert_mask); 
   // Enable steppers by resetting the stepper disable port
+#ifdef PRINTRBOARD
+  X_DISABLE_PORT &= ~(1<<X_DISABLE_BIT);
+  Y_DISABLE_PORT &= ~(1<<Y_DISABLE_BIT);
+  Z_DISABLE_PORT &= ~(1<<Z_DISABLE_BIT);
+#else
   STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT);
+#endif // PRINTRBOARD
   // Enable stepper driver interrupt
   TIMSK1 |= (1<<OCIE1A);
 }
@@ -102,7 +108,14 @@ static void st_go_idle()
     _delay_ms(STEPPER_IDLE_LOCK_TIME);   
   #endif
   // Disable steppers by setting stepper disable
+  // Enable steppers by resetting the stepper disable port
+#ifdef PRINTRBOARD
+  X_DISABLE_PORT |= (1<<X_DISABLE_BIT);
+  Y_DISABLE_PORT |= (1<<Y_DISABLE_BIT);
+  Z_DISABLE_PORT |= (1<<Z_DISABLE_BIT);
+#else
   STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT);
+#endif // PRINTRBOARD
 }
 
 // Initializes the trapezoid generator from the current block. Called whenever a new 
@@ -134,7 +147,7 @@ static uint8_t iterate_trapezoid_cycle_counter()
 // It is supported by The Stepper Port Reset Interrupt which it uses to reset the stepper port after each pulse. 
 // The bresenham line tracer algorithm controls all three stepper outputs simultaneously with these two interrupts.
 ISR(TIMER1_COMPA_vect)
-{        
+{   
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
@@ -271,7 +284,13 @@ void st_init()
   // Configure directions of interface pins
   STEPPING_DDR |= STEPPING_MASK;
   STEPPING_PORT = (STEPPING_PORT & ~STEPPING_MASK) | settings.invert_mask;
+#ifdef PRINTRBOARD
+  X_DISABLE_DDR |= 1<<X_DISABLE_BIT;
+  Y_DISABLE_DDR |= 1<<Y_DISABLE_BIT;
+  Z_DISABLE_DDR |= 1<<Z_DISABLE_BIT;
+#else
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
+#endif // PRINTRBOARD
   
   // waveform generation = 0100 = CTC
   TCCR1B &= ~(1<<WGM13);

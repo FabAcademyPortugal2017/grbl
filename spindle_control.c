@@ -18,9 +18,9 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include "spindle_control.h"
 #include "settings.h"
-#include "config.h"
 #include "stepper.h"
 
 #include <avr/io.h>
