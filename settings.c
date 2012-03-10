@@ -19,6 +19,7 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include <avr/io.h>
 #include <math.h>
 #include "nuts_bolts.h"
@@ -27,7 +28,6 @@
 #include "print.h"
 #include <avr/pgmspace.h>
 #include "protocol.h"
-#include "config.h"
 
 settings_t settings;
 
@@ -84,6 +84,14 @@ void settings_dump() {
   printPgmString(PSTR("\r\n'$x=value' to set parameter or just '$' to dump current settings\r\n"));
 }
 
+
+#ifdef __AVR_AT90USB1286__
+#include "usb_serial/usb_serial.h"
+#include <util/delay.h>
+typedef void (*AppPtr_t)(void) __attribute__ ((noreturn)); 
+AppPtr_t BootLoader = (AppPtr_t)0x1f000; // bootloader addr might need to change
+#endif
+
 // Parameter lines are on the form '$4=374.3' or '$' to dump current settings
 uint8_t settings_execute_line(char *line) {
   uint8_t char_counter = 1;
@@ -91,6 +99,29 @@ uint8_t settings_execute_line(char *line) {
   if(line[0] != '$') { 
     return(STATUS_UNSUPPORTED_STATEMENT); 
   }
+#ifdef __AVR_AT90USB1286__
+  if ((line[1] == 'B') && (line[2] == 'L')) { // bootloader
+    // doesn't work
+    usb_serial_write("bootload\n",9);
+    usb_serial_flush_output();
+    _delay_ms(500);
+
+    // disable usb interrupts
+    USBCON &= ~((1 << VBUSTE) | (1 << IDTE));
+    //    UDIEN = 0;
+    // clear usb interrupts
+    USBINT = 0;
+    //    UDINT = 0;
+
+    UDCON  |=  (1 << DETACH); //detach from USB
+    USBCON &= ~(1 << USBE); // disable USB controller
+    PLLCSR = 0; // usb PLL off
+    UHWCON &= ~(1 << UVREGE); // usb reg off
+    USBCON &= ~(1 << OTGPADE); // otg pad off
+    // delay_ms(2000);
+    BootLoader();     // jump to bootloader
+  }
+#endif
   if(line[char_counter] == 0) { 
     settings_dump(); return(STATUS_OK); 
   }
