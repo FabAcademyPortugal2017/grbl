@@ -21,6 +21,7 @@
 *                         $Revision: 1.6 $
 *                         $Date: Friday, February 11, 2005 07:16:44 UTC $
 ****************************************************************************/
+#include "config.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 

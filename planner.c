@@ -4,7 +4,8 @@
 
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011-2012 Sungeun K. Jeon
-  Copyright (c) 2011 Jens Geisler  
+  Copyright (c) 2011 Jens Geisler
+  Copyright (c) 2012 Sam C. Lin  
   
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -26,11 +27,11 @@
 #include <math.h>       
 #include <stdlib.h>
 
+#include "config.h"
 #include "planner.h"
 #include "nuts_bolts.h"
 #include "stepper.h"
 #include "settings.h"
-#include "config.h"
 #include "protocol.h"
 
 // The number of linear motions that can be in the plan at any give time
@@ -359,10 +360,19 @@ void plan_buffer_line(double x, double y, double z, double feed_rate, uint8_t in
   target[Z_AXIS] = lround(z*settings.steps_per_mm[Z_AXIS]);     
 
   // Compute direction bits for this block
+#ifdef STEPPING_DDR
   block->direction_bits = 0;
   if (target[X_AXIS] < pl.position[X_AXIS]) { block->direction_bits |= (1<<X_DIRECTION_BIT); }
   if (target[Y_AXIS] < pl.position[Y_AXIS]) { block->direction_bits |= (1<<Y_DIRECTION_BIT); }
   if (target[Z_AXIS] < pl.position[Z_AXIS]) { block->direction_bits |= (1<<Z_DIRECTION_BIT); }
+#else
+  if (target[X_AXIS] < pl.position[X_AXIS]) { block->direction_bits_x = (1<<X_DIRECTION_BIT); }
+  else block->direction_bits_x = 0;
+  if (target[Y_AXIS] < pl.position[Y_AXIS]) { block->direction_bits_y = (1<<Y_DIRECTION_BIT); }
+  else block->direction_bits_y = 0;
+  if (target[Z_AXIS] < pl.position[Z_AXIS]) { block->direction_bits_z = (1<<Z_DIRECTION_BIT); }
+  else block->direction_bits_z = 0;
+#endif // STEPPING_DDR
   
   // Number of steps for each axis
   block->steps_x = labs(target[X_AXIS]-pl.position[X_AXIS]);

@@ -1,5 +1,18 @@
 h1. Grbl - An embedded g-code interpreter and motion-controller for the Arduino/AVR328 microcontroller
     
+*****************
+This fork adds support for Printrboard/Teensylu/AT90USBxx chips with native USB
+Also Sanguinololu and compatibles, such as Panucatt Azteeg X1
+
+Arduino: make -f Makefile.Arduino
+Printrboard: make -f Makefile.Printrboard
+Sanguinololu: make -f Makefile.Sanguinololu
+
+20121107 SCL
+- add Printrboard/Sanguinololu/X1 support
+
+*****************
+    
 Grbl is a no-compromise, high performance, low cost alternative to parallel-port-based motion control for CNC milling. It will run on a vanilla Arduino (Duemillanove/Uno) as long as it sports an Atmega 328. 
 
 The controller is written in highly optimized C utilizing every clever feature of the AVR-chips to achieve precise timing and asynchronous operation. It is able to maintain more than 30kHz of stable, jitter free control pulses.

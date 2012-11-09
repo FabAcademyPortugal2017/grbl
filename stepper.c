@@ -4,6 +4,7 @@
 
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011-2012 Sungeun K. Jeon
+  Copyright (c) 2012 Sam C. Lin
   
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,8 +23,8 @@
 /* The timer calculations of this module informed by the 'RepRap cartesian firmware' by Zack Smith
    and Philipp Tiefenbacher. */
 
-#include "stepper.h"
 #include "config.h"
+#include "stepper.h"
 #include "settings.h"
 #include <math.h>
 #include <stdlib.h>
@@ -59,7 +60,17 @@ static block_t *current_block;  // A pointer to the block currently being traced
 
 // Used by the stepper driver interrupt
 static uint8_t step_pulse_time; // Step pulse reset time after step rise
+#ifdef STEPPING_DDR
 static uint8_t out_bits;        // The next stepping-bits to be output
+#else
+static uint8_t step_bit_x;        // The next step-bit to be output
+static uint8_t step_bit_y;        // The next step-bit to be output
+static uint8_t step_bit_z;        // The next step-bit to be output
+static uint8_t dir_bit_x;        // The next dir-bit to be output
+static uint8_t dir_bit_y;        // The next dir-bit to be output
+static uint8_t dir_bit_z;        // The next dir-bit to be output
+#endif
+
 static volatile uint8_t busy;   // True when SIG_OUTPUT_COMPARE1A is being serviced. Used to avoid retriggering that handler.
 
 //         __________________________
@@ -85,11 +96,26 @@ static void set_step_events_per_minute(uint32_t steps_per_minute);
 static void st_wake_up() 
 {
   // Initialize stepper output bits
+#ifdef STEPPING_DDR
   out_bits = (0) ^ (settings.invert_mask); 
+#else
+  step_bit_x = 0;
+  step_bit_y = 0;
+  step_bit_z = 0;
+#endif
   // Set step pulse time. Ad hoc computation from oscilloscope.
   step_pulse_time = -(((settings.pulse_microseconds-2)*TICKS_PER_MICROSECOND) >> 3);
   // Enable steppers by resetting the stepper disable port
+#ifdef X_DISABLE_PORT
+  X_DISABLE_PORT &= ~(1<<X_DISABLE_BIT);
+  Y_DISABLE_PORT &= ~(1<<Y_DISABLE_BIT);
+  Z_DISABLE_PORT &= ~(1<<Z_DISABLE_BIT);
+#else
   STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT);
+#ifdef STEPPERS_DISABLE2_PORT
+  STEPPERS_DISABLE2_PORT &= ~(1<<STEPPERS_DISABLE2_BIT);
+#endif // STEPPERS_DISABLE2_PORT
+#endif // X_DISABLE_PORT
   // Enable stepper driver interrupt
   TIMSK1 |= (1<<OCIE1A);
 }
@@ -105,7 +131,16 @@ void st_go_idle()
     _delay_ms(STEPPER_IDLE_LOCK_TIME);   
   #endif
   // Disable steppers by setting stepper disable
+#ifdef X_DISABLE_PORT
+  X_DISABLE_PORT |= (1<<X_DISABLE_BIT);
+  Y_DISABLE_PORT |= (1<<Y_DISABLE_BIT);
+  Z_DISABLE_PORT |= (1<<Z_DISABLE_BIT);
+#else
   STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT);
+#ifdef STEPPERS_DISABLE2_PORT
+  STEPPERS_DISABLE2_PORT |= (1<<STEPPERS_DISABLE2_BIT);
+#endif // STEPPERS_DISABLE2_PORT
+#endif // X_DISABLE_PORT
 }
 
 // This function determines an acceleration velocity change every CYCLES_PER_ACCELERATION_TICK by
@@ -130,10 +165,27 @@ ISR(TIMER1_COMPA_vect)
 {        
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
+#ifdef STEPPING_DDR
   // Set the direction pins a couple of nanoseconds before we step the steppers
   STEPPING_PORT = (STEPPING_PORT & ~DIRECTION_MASK) | (out_bits & DIRECTION_MASK);
   // Then pulse the stepping pins
   STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | out_bits;
+#else
+  // Set the direction pin a couple of nanoseconds before we step the steppers
+  X_DIRECTION_PORT = (X_DIRECTION_PORT & ~DIRECTION_MASK_X) | dir_bit_x;
+  // Then pulse the stepping pin
+  X_STEP_PORT = (X_STEP_PORT & ~STEP_MASK_X) | step_bit_x;
+
+  // Set the direction pins a couple of nanoseconds before we step the steppers
+  Y_DIRECTION_PORT = (Y_DIRECTION_PORT & ~DIRECTION_MASK_Y) | dir_bit_y;
+  // Then pulse the stepping pins
+  Y_STEP_PORT = (Y_STEP_PORT & ~STEP_MASK_Y) | step_bit_y;
+
+  // Set the direction pins a couple of nanoseconds before we step the steppers
+  Z_DIRECTION_PORT = (Z_DIRECTION_PORT & ~DIRECTION_MASK_Z) | dir_bit_z;
+  // Then pulse the stepping pins
+  Z_STEP_PORT = (Z_STEP_PORT & ~STEP_MASK_Z) | step_bit_z;
+#endif // STEPPING_DDR
   // Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   TCNT2 = step_pulse_time; // Reload timer counter
@@ -171,27 +223,57 @@ ISR(TIMER1_COMPA_vect)
 
   if (current_block != NULL) {
     // Execute step displacement profile by bresenham line algorithm
+#ifdef STEPPING_DDR
     out_bits = current_block->direction_bits;
+#else
+    dir_bit_x = current_block->direction_bits_x;
+    dir_bit_y = current_block->direction_bits_y;
+    dir_bit_z = current_block->direction_bits_z;
+    step_bit_x = 0;
+    step_bit_y = 0;
+    step_bit_z = 0;
+#endif
     st.counter_x += current_block->steps_x;
     if (st.counter_x > 0) {
+#ifdef STEPPING_DDR
       out_bits |= (1<<X_STEP_BIT);
       st.counter_x -= st.event_count;
       if (out_bits & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
       else { sys.position[X_AXIS]++; }
+#else
+      step_bit_x = STEP_MASK_X;
+      st.counter_x -= st.event_count;
+      if (dir_bit_x & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
+      else { sys.position[X_AXIS]++; }
+#endif
     }
     st.counter_y += current_block->steps_y;
     if (st.counter_y > 0) {
+#ifdef STEPPING_DDR
       out_bits |= (1<<Y_STEP_BIT);
       st.counter_y -= st.event_count;
       if (out_bits & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
       else { sys.position[Y_AXIS]++; }
+#else
+      step_bit_y = STEP_MASK_Y;
+      st.counter_y -= st.event_count;
+      if (dir_bit_y & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
+      else { sys.position[Y_AXIS]++; }
+#endif
     }
     st.counter_z += current_block->steps_z;
     if (st.counter_z > 0) {
+#ifdef STEPPING_DDR
       out_bits |= (1<<Z_STEP_BIT);
       st.counter_z -= st.event_count;
       if (out_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
       else { sys.position[Z_AXIS]++; }
+#else
+      step_bit_z = STEP_MASK_Z;
+      st.counter_z -= st.event_count;
+      if (dir_bit_z & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
+      else { sys.position[Z_AXIS]++; }
+#endif
     }
     
     st.step_events_completed++; // Iterate step events
@@ -283,7 +365,9 @@ ISR(TIMER1_COMPA_vect)
       plan_discard_current_block();
     }
   }
+#ifdef STEPPING_DDR
   out_bits ^= settings.invert_mask;  // Apply stepper invert mask    
+#endif
   busy = false;
 }
 
@@ -294,7 +378,13 @@ ISR(TIMER1_COMPA_vect)
 ISR(TIMER2_OVF_vect)
 {
   // Reset stepping pins (leave the direction pins)
+#ifdef STEPPING_DDR
   STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | (settings.invert_mask & STEP_MASK); 
+#else
+  X_STEP_PORT &= ~STEP_MASK_X;
+  Y_STEP_PORT &= ~STEP_MASK_Y;
+  Z_STEP_PORT &= ~STEP_MASK_Z;
+#endif
   TCCR2B = 0; // Disable Timer2 to prevent re-entering this interrupt when it's not needed. 
 }
 
@@ -311,9 +401,33 @@ void st_reset()
 void st_init()
 {
   // Configure directions of interface pins
+#ifdef STEPPING_DDR
   STEPPING_DDR |= STEPPING_MASK;
   STEPPING_PORT = (STEPPING_PORT & ~STEPPING_MASK) | settings.invert_mask;
+#else
+  X_STEP_DDR |= STEP_MASK_X;
+  X_STEP_PORT &= ~STEP_MASK_X;
+  X_DIRECTION_DDR |= DIRECTION_MASK_X;
+
+  Y_STEP_DDR |= STEP_MASK_Y;
+  Y_STEP_PORT &= ~STEP_MASK_Y;
+  Y_DIRECTION_DDR |= DIRECTION_MASK_Y;
+
+  Z_STEP_DDR |= STEP_MASK_Z;
+  Z_STEP_PORT &= ~STEP_MASK_Z;
+  Z_DIRECTION_DDR |= DIRECTION_MASK_Z;
+#endif // STEPPING_DDR
+
+#ifdef X_DISABLE_DDR
+  X_DISABLE_DDR |= 1<<X_DISABLE_BIT;
+  Y_DISABLE_DDR |= 1<<Y_DISABLE_BIT;
+  Z_DISABLE_DDR |= 1<<Z_DISABLE_BIT;
+#else
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
+#ifdef STEPPERS_DISABLE2_PORT
+  STEPPERS_DISABLE2_DDR |= 1<<STEPPERS_DISABLE2_BIT;
+#endif // STEPPERS_DISABLE2_PORT
+#endif // X_DISABLE_DDR
   
   // waveform generation = 0100 = CTC
   TCCR1B &= ~(1<<WGM13);

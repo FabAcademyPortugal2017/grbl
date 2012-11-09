@@ -18,10 +18,10 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "config.h"
 #include "spindle_control.h"
 #include "settings.h"
 #include "motion_control.h"
-#include "config.h"
 #include "planner.h"
 #include "stepper.h"
 

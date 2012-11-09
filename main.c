@@ -67,7 +67,11 @@ int main(void)
 
       // Reset system.
       memset(&sys, 0, sizeof(sys)); // Clear all system variables
+#ifdef __AVR_AT90USB1286__
+      usb_serial_flush_input();	// discard any buffered input
+#else
       serial_reset_read_buffer(); // Clear serial read buffer
+#endif
       settings_init(); // Load grbl settings from EEPROM
       protocol_init(); // Clear incoming line data
       plan_init(); // Clear block buffer and planner variables

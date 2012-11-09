@@ -22,6 +22,7 @@
 /* This code is inspired by the Arduino GCode Interpreter by Mike Ellery and the NIST RS274/NGC Interpreter
    by Kramer, Proctor and Messina. */
 
+#include "config.h"
 #include "gcode.h"
 #include <string.h>
 #include "nuts_bolts.h"

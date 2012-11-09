@@ -21,8 +21,8 @@
 */
 
 #include <avr/io.h>
-#include "settings.h"
 #include "config.h"
+#include "settings.h"
 #include "motion_control.h"
 #include <util/delay.h>
 #include <math.h>

@@ -4,6 +4,7 @@
 
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011-2012 Sungeun K. Jeon
+  Copyright (c) 2012 Sam C. Lin
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -24,12 +25,31 @@
 
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
-#include "serial.h"
 #include "config.h"
+#include "serial.h"
 #include "stepper.h"
 #include "spindle_control.h"
 #include "nuts_bolts.h"
 #include "protocol.h"
+
+#ifdef __AVR_AT90USB1286__
+#include "usb_serial/usb_serial.h"
+void serial_init(long baud)
+{
+  usb_init();
+}
+
+void serial_write(uint8_t data)
+{
+  usb_serial_putchar(data);
+}
+
+uint8_t serial_read()
+{
+  return usb_serial_getchar();
+}
+
+#else
 
 #define RX_BUFFER_SIZE 128
 #define TX_BUFFER_SIZE 64
@@ -105,8 +125,13 @@ void serial_write(uint8_t data) {
 }
 
 // Data Register Empty Interrupt handler
-ISR(USART_UDRE_vect)
-{
+ISR(
+#ifdef USART0_UDRE_vect
+USART0_UDRE_vect
+#else
+USART_UDRE_vect
+#endif
+ ) {
   // Temporary tx_buffer_tail (to optimize for volatile)
   uint8_t tail = tx_buffer_tail;
   
@@ -154,7 +179,13 @@ uint8_t serial_read()
   }
 }
 
-ISR(USART_RX_vect)
+ISR(
+#ifdef USART0_RX_vect
+ USART0_RX_vect
+#else
+USART_RX_vect
+#endif
+)
 {
   uint8_t data = UDR0;
   uint8_t next_head;
@@ -201,3 +232,5 @@ void serial_reset_read_buffer()
     flow_ctrl = XON_SENT;
   #endif
 }  
+
+#endif // __AVR_AT90USB1286__

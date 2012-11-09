@@ -4,6 +4,7 @@
 
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011-2012 Sungeun K. Jeon
+  Copyright (c) 2012 Sam C. Lin
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,11 +23,102 @@
 #ifndef config_h
 #define config_h
 
+// don't set these defines... use the appropriate Makefile instead
+//#define PRINTRBOARD
+//#define SANGUINOLOLU  // Azteeg X1, etc ...
+
 // IMPORTANT: Any changes here requires a full re-compiling of the source code to propagate them.
 
-#define BAUD_RATE 9600
+//#define BAUD_RATE 9600
+#define BAUD_RATE 115200
 
-// Define pin-assignments
+// Updated default pin-assignments from 0.6 onwards 
+// (see bottom of file for a copy of the old config)
+
+#ifdef PRINTRBOARD
+#define X_DISABLE_DDR      DDRE
+#define X_DISABLE_PORT     PORTE
+#define X_DISABLE_BIT      7
+#define Y_DISABLE_DDR      DDRE
+#define Y_DISABLE_PORT     PORTE
+#define Y_DISABLE_BIT      6
+#define Z_DISABLE_DDR      DDRC
+#define Z_DISABLE_PORT     PORTC
+#define Z_DISABLE_BIT      7
+
+#define STEPPING_DDR       DDRA
+#define STEPPING_PORT      PORTA
+#define X_STEP_BIT           0
+#define Y_STEP_BIT           2
+#define Z_STEP_BIT           4
+#define X_DIRECTION_BIT      1
+#define Y_DIRECTION_BIT      3
+#define Z_DIRECTION_BIT      5
+
+// N.B. LIMIT currently doesn't work for Printrboard because it uses 2 ports B & E
+#define LIMIT_DDR      DDRB
+#define LIMIT_PIN     PINB
+#define X_LIMIT_BIT          3 // PE3
+#define Y_LIMIT_BIT          0 // PB0
+#define Z_LIMIT_BIT          4 // PE4
+
+#define SPINDLE_ENABLE_DDR DDRB
+#define SPINDLE_ENABLE_PORT PORTB
+#define SPINDLE_ENABLE_BIT 4
+
+#define SPINDLE_DIRECTION_DDR DDRB
+#define SPINDLE_DIRECTION_PORT PORTB
+#define SPINDLE_DIRECTION_BIT 5
+
+#elif defined(SANGUINOLOLU)
+// XYE
+#define STEPPERS_DISABLE_DDR     DDRD
+#define STEPPERS_DISABLE_PORT    PORTD
+#define STEPPERS_DISABLE_BIT         6
+// Z
+#define STEPPERS_DISABLE2_DDR     DDRA
+#define STEPPERS_DISABLE2_PORT    PORTA
+#define STEPPERS_DISABLE2_BIT         5
+
+
+#define X_STEP_DDR       DDRD
+#define X_STEP_PORT      PORTD
+#define X_STEP_BIT           7
+#define X_DIRECTION_DDR      DDRC
+#define X_DIRECTION_PORT     PORTC
+#define X_DIRECTION_BIT      5
+
+#define Y_STEP_DDR       DDRC
+#define Y_STEP_PORT      PORTC
+#define Y_STEP_BIT           6
+#define Y_DIRECTION_DDR      DDRC
+#define Y_DIRECTION_PORT     PORTC
+#define Y_DIRECTION_BIT      7
+
+#define Z_STEP_DDR       DDRB
+#define Z_STEP_PORT      PORTB
+#define Z_STEP_BIT           3
+#define Z_DIRECTION_DDR      DDRB
+#define Z_DIRECTION_PORT     PORTB
+#define Z_DIRECTION_BIT      2
+
+#define LIMIT_DDR            DDRC
+#define LIMIT_PIN            PINC
+#define X_LIMIT_BIT          2
+#define Y_LIMIT_BIT          3
+#define Z_LIMIT_BIT          4
+
+// HOTEND
+#define SPINDLE_ENABLE_DDR DDRD 
+#define SPINDLE_ENABLE_PORT PORTD
+#define SPINDLE_ENABLE_BIT 5
+
+// HOTBED
+#define SPINDLE_DIRECTION_DDR DDRD
+#define SPINDLE_DIRECTION_PORT PORTD
+#define SPINDLE_DIRECTION_BIT 4
+
+#else // 328P
 #define STEPPING_DDR       DDRD
 #define STEPPING_PORT      PORTD
 #define X_STEP_BIT         2  // Uno Digital Pin 2
@@ -53,6 +145,7 @@
 #define SPINDLE_DIRECTION_DDR DDRB
 #define SPINDLE_DIRECTION_PORT PORTB
 #define SPINDLE_DIRECTION_BIT 5  // Uno Digital Pin 13
+#endif
 
 // Define runtime command special characters. These characters are 'picked-off' directly from the
 // serial read data stream and are not passed to the grbl line execution parser. Select characters
@@ -141,4 +234,4 @@
   #define DECIMAL_MULTIPLIER 100
 #endif
 
-#endif
+#endif // config_h
