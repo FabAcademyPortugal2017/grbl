@@ -8,7 +8,7 @@ Arduino: make -f Makefile.Arduino
 Printrboard: make -f Makefile.Printrboard
 Sanguinololu: make -f Makefile.Sanguinololu
 
-20121107 SCL
+20121108 SCL
 - add Printrboard/Sanguinololu/X1 support
 
 *****************
