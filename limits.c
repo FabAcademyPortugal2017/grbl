@@ -1,5 +1,5 @@
 /*
-  limits.h - code pertaining to limit-switches and performing the homing cycle
+  limits.c - code pertaining to limit-switches and performing the homing cycle
   Part of Grbl
 
   Copyright (c) 2009-2011 Simen Svale Skogsrud
@@ -18,9 +18,9 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
   
-#include "config.h"
 #include <util/delay.h>
 #include <avr/io.h>
+#include "config.h"
 #include "stepper.h"
 #include "settings.h"
 #include "nuts_bolts.h"

@@ -19,9 +19,9 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "config.h"
 #include <avr/io.h>
 #include <math.h>
+#include "config.h"
 #include "nuts_bolts.h"
 #include "settings.h"
 #include "eeprom.h"

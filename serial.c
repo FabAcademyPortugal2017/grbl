@@ -21,9 +21,9 @@
 /* This code was initially inspired by the wiring_serial module by David A. Mellis which
    used to be a part of the Arduino project. */ 
 
-#include "config.h"
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include "config.h"
 #include "serial.h"
 
 #ifdef __AVR_AT90USB1286__
