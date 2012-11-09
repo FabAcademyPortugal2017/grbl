@@ -249,7 +249,7 @@ ISR(TIMER1_COMPA_vect)
 #ifdef STEPPING_DDR
       out_bits |= (1<<Z_STEP_BIT);
 #else
-      step_bit_z = STEP_MASK_X;
+      step_bit_z = STEP_MASK_Z;
 #endif
       counter_z -= current_block->step_event_count;
     }
