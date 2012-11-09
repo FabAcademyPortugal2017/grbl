@@ -26,11 +26,15 @@
 #include <math.h>
 #include <inttypes.h>
 
-#define GRBL_VERSION "0.7d"
+#define GRBL_VERSION "0.7d-lincomatic"
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
+#ifdef STEPPING_DDR
 #define SETTINGS_VERSION 4
+#else
+#define SETTINGS_VERSION 5
+#endif
 
 // Current global settings (persisted in EEPROM from byte 1 onwards)
 typedef struct {
@@ -39,7 +43,13 @@ typedef struct {
   uint8_t pulse_microseconds;
   double default_feed_rate;
   double default_seek_rate;
+#ifdef STEPPING_DDR
   uint8_t invert_mask;
+#else
+  uint8_t invert_mask_x;
+  uint8_t invert_mask_y;
+  uint8_t invert_mask_z;
+#endif
   double mm_per_arc_segment;
   double acceleration;
   double junction_deviation;

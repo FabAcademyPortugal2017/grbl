@@ -21,19 +21,18 @@
 
 /* The ring buffer implementation gleaned from the wiring_serial library by David A. Mellis. */
 
-#include "config.h"
 #include <inttypes.h>
 #include <math.h>       
 #include <stdlib.h>
 
+#include "config.h"
 #include "planner.h"
 #include "nuts_bolts.h"
 #include "stepper.h"
 #include "settings.h"
-//#include "config.h"
 
 // The number of linear motions that can be in the plan at any give time
-#ifdef __AVR_ATmega328P__
+#ifndef __AVR_ATmega168P__
 #define BLOCK_BUFFER_SIZE 18
 #else
 #define BLOCK_BUFFER_SIZE 5
@@ -341,10 +340,19 @@ void plan_buffer_line(double x, double y, double z, double feed_rate, uint8_t in
   block_t *block = &block_buffer[block_buffer_head];
 
   // Compute direction bits for this block
+#ifdef STEPPING_DDR
   block->direction_bits = 0;
   if (target[X_AXIS] < position[X_AXIS]) { block->direction_bits |= (1<<X_DIRECTION_BIT); }
   if (target[Y_AXIS] < position[Y_AXIS]) { block->direction_bits |= (1<<Y_DIRECTION_BIT); }
   if (target[Z_AXIS] < position[Z_AXIS]) { block->direction_bits |= (1<<Z_DIRECTION_BIT); }
+#else
+  if (target[X_AXIS] < position[X_AXIS]) { block->direction_bits_x = (1<<X_DIRECTION_BIT); }
+  else block->direction_bits_x = 0;
+  if (target[Y_AXIS] < position[Y_AXIS]) { block->direction_bits_y = (1<<Y_DIRECTION_BIT); }
+  else block->direction_bits_y = 0;
+  if (target[Z_AXIS] < position[Z_AXIS]) { block->direction_bits_z = (1<<Z_DIRECTION_BIT); }
+  else block->direction_bits_z = 0;
+#endif // STEPPING_DDR
   
   // Number of steps for each axis
   block->steps_x = labs(target[X_AXIS]-position[X_AXIS]);

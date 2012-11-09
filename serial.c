@@ -46,7 +46,7 @@ uint8_t serial_read()
 #else
 
 
-#ifdef __AVR_ATmega328P__
+#ifndef __AVR_ATmega168P__
 #define RX_BUFFER_SIZE 256
 #else
 #define RX_BUFFER_SIZE 64
@@ -102,7 +102,13 @@ void serial_write(uint8_t data) {
 }
 
 // Data Register Empty Interrupt handler
-ISR(USART_UDRE_vect) {  
+ISR(
+#ifdef USART0_UDRE_vect
+USART0_UDRE_vect
+#else
+USART_UDRE_vect
+#endif
+ ) {
   // Temporary tx_buffer_tail (to optimize for volatile)
   uint8_t tail = tx_buffer_tail;
 
@@ -131,7 +137,13 @@ uint8_t serial_read()
   }
 }
 
-ISR(USART_RX_vect)
+ISR(
+#ifdef USART0_RX_vect
+ USART0_RX_vect
+#else
+USART_RX_vect
+#endif
+)
 {
   uint8_t data = UDR0;
   uint8_t next_head = rx_buffer_head + 1;

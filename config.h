@@ -22,16 +22,14 @@
 #ifndef config_h
 #define config_h
 
-#define PRINTRBOARD
-
-#define  HardwareSerial_h // trick to disable the standard HWserial
-
-//#define  FORCE_INLINE __attribute__((always_inline)) inline
-
+// don't set these defines... use the appropriate Makefile instead
+//#define PRINTRBOARD
+//#define SANGUINOLOLU  // Azteeg X1, etc ...
 
 // IMPORTANT: Any changes here requires a full re-compiling of the source code to propagate them.
 
-#define BAUD_RATE 9600
+//#define BAUD_RATE 9600
+#define BAUD_RATE 115200
 
 // Updated default pin-assignments from 0.6 onwards 
 // (see bottom of file for a copy of the old config)
@@ -55,7 +53,72 @@
 #define X_DIRECTION_BIT      1
 #define Y_DIRECTION_BIT      3
 #define Z_DIRECTION_BIT      5
-#else
+
+// N.B. LIMIT currently doesn't work for Printrboard because it uses 2 ports B & E
+#define LIMIT_DDR      DDRB
+#define LIMIT_PIN     PINB
+#define X_LIMIT_BIT          3 // PE3
+#define Y_LIMIT_BIT          0 // PB0
+#define Z_LIMIT_BIT          4 // PE4
+
+#define SPINDLE_ENABLE_DDR DDRB
+#define SPINDLE_ENABLE_PORT PORTB
+#define SPINDLE_ENABLE_BIT 4
+
+#define SPINDLE_DIRECTION_DDR DDRB
+#define SPINDLE_DIRECTION_PORT PORTB
+#define SPINDLE_DIRECTION_BIT 5
+
+#elif defined(SANGUINOLOLU)
+// XYE
+#define STEPPERS_DISABLE_DDR     DDRD
+#define STEPPERS_DISABLE_PORT    PORTD
+#define STEPPERS_DISABLE_BIT         6
+// Z
+#define STEPPERS_DISABLE2_DDR     DDRA
+#define STEPPERS_DISABLE2_PORT    PORTA
+#define STEPPERS_DISABLE2_BIT         5
+
+
+#define X_STEP_DDR       DDRD
+#define X_STEP_PORT      PORTD
+#define X_STEP_BIT           7
+#define X_DIRECTION_DDR      DDRC
+#define X_DIRECTION_PORT     PORTC
+#define X_DIRECTION_BIT      5
+
+#define Y_STEP_DDR       DDRC
+#define Y_STEP_PORT      PORTC
+#define Y_STEP_BIT           6
+#define Y_DIRECTION_DDR      DDRC
+#define Y_DIRECTION_PORT     PORTC
+#define Y_DIRECTION_BIT      7
+
+#define Z_STEP_DDR       DDRB
+#define Z_STEP_PORT      PORTB
+#define Z_STEP_BIT           3
+#define Z_DIRECTION_DDR      DDRB
+#define Z_DIRECTION_PORT     PORTB
+#define Z_DIRECTION_BIT      2
+
+#define LIMIT_DDR            DDRC
+#define LIMIT_PIN            PINC
+#define X_LIMIT_BIT          2
+#define Y_LIMIT_BIT          3
+#define Z_LIMIT_BIT          4
+
+// HOTEND
+#define SPINDLE_ENABLE_DDR DDRD 
+#define SPINDLE_ENABLE_PORT PORTD
+#define SPINDLE_ENABLE_BIT 5
+
+// HOTBED
+#define SPINDLE_DIRECTION_DDR DDRD
+#define SPINDLE_DIRECTION_PORT PORTD
+#define SPINDLE_DIRECTION_BIT 4
+
+#else // 328P
+
 #define STEPPERS_DISABLE_DDR     DDRB
 #define STEPPERS_DISABLE_PORT    PORTB
 #define STEPPERS_DISABLE_BIT         0
@@ -68,7 +131,6 @@
 #define X_DIRECTION_BIT      5
 #define Y_DIRECTION_BIT      6
 #define Z_DIRECTION_BIT      7
-#endif // PRINTRBOARD
 
 #define LIMIT_DDR      DDRB
 #define LIMIT_PIN     PINB
@@ -83,6 +145,7 @@
 #define SPINDLE_DIRECTION_DDR DDRB
 #define SPINDLE_DIRECTION_PORT PORTB
 #define SPINDLE_DIRECTION_BIT 5
+#endif
 
 // This parameter sets the delay time before disabling the steppers after the final block of movement.
 // A short delay ensures the steppers come to a complete stop and the residual inertial force in the 

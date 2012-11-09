@@ -42,7 +42,7 @@ void mc_dwell(double seconds)
    }
 }
 
-#ifdef __AVR_ATmega328P__
+#ifndef __AVR_ATmega168P__
 // The arc is approximated by generating a huge number of tiny, linear segments. The length of each 
 // segment is configured in settings.mm_per_arc_segment.  
 void mc_arc(double *position, double *target, double *offset, uint8_t axis_0, uint8_t axis_1, 

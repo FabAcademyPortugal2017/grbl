@@ -1,3 +1,6 @@
+*~
+*.bak
+archive/*
 *.hex
 *.o
 *.elf

@@ -35,7 +35,7 @@
 
 #define mc_set_current_position(x, y, z) plan_set_current_position(x, y, z) 
 
-#ifdef __AVR_ATmega328P__
+#ifndef __AVR_ATmega168P__
 // Execute an arc in offset mode format. position == current xyz, target == target xyz, 
 // offset == offset from current xyz, axis_XXX defines circle plane in tool space, axis_linear is
 // the direction of helical travel, radius == circle radius, isclockwise boolean. Used

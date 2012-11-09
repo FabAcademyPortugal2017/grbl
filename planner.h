@@ -29,7 +29,13 @@
 typedef struct {
 
   // Fields used by the bresenham algorithm for tracing the line
+#ifdef STEPPING_DDR
   uint8_t  direction_bits;            // The direction bit set for this block (refers to *_DIRECTION_BIT in config.h)
+#else
+  uint8_t  direction_bits_x;
+  uint8_t  direction_bits_y;
+  uint8_t  direction_bits_z;
+#endif // STEPPING_DDR
   uint32_t steps_x, steps_y, steps_z; // Step count along each axis
   int32_t  step_event_count;          // The number of step events required to complete this block
 

@@ -24,7 +24,7 @@
 #include "stepper.h"
 #include "settings.h"
 #include "nuts_bolts.h"
-#include "config.h"
+
 
 void limits_init() {
   LIMIT_DDR &= ~(LIMIT_MASK);
@@ -33,23 +33,51 @@ void limits_init() {
 static void homing_cycle(bool x_axis, bool y_axis, bool z_axis, bool reverse_direction, uint32_t microseconds_per_pulse) {
   // First home the Z axis
   uint32_t step_delay = microseconds_per_pulse - settings.pulse_microseconds;
+#ifdef STEPPING_DDR
   uint8_t out_bits = DIRECTION_MASK;
+#else
+  uint8_t dir_bit_x = DIRECTION_MASK_X;
+  uint8_t dir_bit_y = DIRECTION_MASK_Y;
+  uint8_t dir_bit_z = DIRECTION_MASK_Z;
+  uint8_t step_bit_x = 0;
+  uint8_t step_bit_y = 0;
+  uint8_t step_bit_z = 0;
+#endif
   uint8_t limit_bits;
   
+#ifdef STEPPING_DDR
   if (x_axis) { out_bits |= (1<<X_STEP_BIT); }
   if (y_axis) { out_bits |= (1<<Y_STEP_BIT); }
   if (z_axis) { out_bits |= (1<<Z_STEP_BIT); }
+#else
+  if (x_axis) { step_bit_x = (1<<X_STEP_BIT); }
+  if (y_axis) { step_bit_y = (1<<Y_STEP_BIT); }
+  if (z_axis) { step_bit_z = (1<<Z_STEP_BIT); }
+#endif
   
   // Invert direction bits if this is a reverse homing_cycle
   if (reverse_direction) {
+#ifdef STEPPING_DDR
     out_bits ^= DIRECTION_MASK;
+#else
+    dir_bit_x ^= DIRECTION_MASK_X;
+    dir_bit_y ^= DIRECTION_MASK_Y;
+    dir_bit_z ^= DIRECTION_MASK_Z;
+#endif
   }
   
+#ifdef STEPPING_DDR
   // Apply the global invert mask
   out_bits ^= settings.invert_mask;
-  
   // Set direction pins
   STEPPING_PORT = (STEPPING_PORT & ~DIRECTION_MASK) | (out_bits & DIRECTION_MASK);
+#else
+  // Set direction pins
+  X_DIRECTION_PORT = (X_DIRECTION_PORT & ~DIRECTION_MASK_X) | dir_bit_x;
+  Y_DIRECTION_PORT = (Y_DIRECTION_PORT & ~DIRECTION_MASK_Y) | dir_bit_y;
+  Z_DIRECTION_PORT = (Z_DIRECTION_PORT & ~DIRECTION_MASK_Z) | dir_bit_z;
+#endif
+  
   
   for(;;) {
     limit_bits = LIMIT_PIN;
@@ -59,21 +87,43 @@ static void homing_cycle(bool x_axis, bool y_axis, bool z_axis, bool reverse_dir
     }
     if (x_axis && !(LIMIT_PIN & (1<<X_LIMIT_BIT))) {
       x_axis = false;
+#ifdef STEPPING_DDR
       out_bits ^= (1<<X_STEP_BIT);      
+#else
+      step_bit_x = 0;
+#endif
     }    
     if (y_axis && !(LIMIT_PIN & (1<<Y_LIMIT_BIT))) {
       y_axis = false;
+#ifdef STEPPING_DDR
       out_bits ^= (1<<Y_STEP_BIT);
+#else
+      step_bit_y = 0;
+#endif
     }    
     if (z_axis && !(LIMIT_PIN & (1<<Z_LIMIT_BIT))) {
       z_axis = false;
+#ifdef STEPPING_DDR
       out_bits ^= (1<<Z_STEP_BIT);
+#else
+      step_bit_z = 0;
+#endif
     }
     // Check if we are done
     if(!(x_axis || y_axis || z_axis)) { return; }
+#ifdef STEPPING_DDR
     STEPPING_PORT |= out_bits & STEP_MASK;
     delay_us(settings.pulse_microseconds);
     STEPPING_PORT ^= out_bits & STEP_MASK;
+#else
+    X_STEP_PORT = (X_STEP_PORT & ~STEP_MASK_X) | step_bit_x; 
+    Y_STEP_PORT = (Y_STEP_PORT & ~STEP_MASK_Y) | step_bit_y;
+    Z_STEP_PORT = (Z_STEP_PORT & ~STEP_MASK_Z) | step_bit_z;
+    delay_us(settings.pulse_microseconds);
+    X_STEP_PORT &= ~STEP_MASK_X;
+    Y_STEP_PORT &= ~STEP_MASK_Y;
+    Z_STEP_PORT &= ~STEP_MASK_Z;
+#endif
     delay_us(step_delay);
   }
   return;

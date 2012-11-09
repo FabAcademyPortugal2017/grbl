@@ -33,18 +33,22 @@
 #include "planner.h"
 #include "limits.h"
 
-// Some useful constants
-#define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
-#define DIRECTION_MASK ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
-#define STEPPING_MASK (STEP_MASK | DIRECTION_MASK) // All stepping-related bits (step/direction)
-
 #define TICKS_PER_MICROSECOND (F_CPU/1000000)
 #define CYCLES_PER_ACCELERATION_TICK ((TICKS_PER_MICROSECOND*1000000)/ACCELERATION_TICKS_PER_SECOND)
 
 static block_t *current_block;  // A pointer to the block currently being traced
 
 // Variables used by The Stepper Driver Interrupt
+#ifdef STEPPING_DDR
 static uint8_t out_bits;        // The next stepping-bits to be output
+#else
+static uint8_t step_bit_x;        // The next step-bit to be output
+static uint8_t step_bit_y;        // The next step-bit to be output
+static uint8_t step_bit_z;        // The next step-bit to be output
+static uint8_t dir_bit_x;        // The next dir-bit to be output
+static uint8_t dir_bit_y;        // The next dir-bit to be output
+static uint8_t dir_bit_z;        // The next dir-bit to be output
+#endif
 static int32_t counter_x,       // Counter variables for the bresenham line tracer
                counter_y, 
                counter_z;       
@@ -82,15 +86,25 @@ static void set_step_events_per_minute(uint32_t steps_per_minute);
 static void st_wake_up() 
 {
   // Initialize stepper output bits
+#ifdef STEPPING_DDR
   out_bits = (0) ^ (settings.invert_mask); 
+#else
+  step_bit_x = 0;
+  step_bit_y = 0;
+  step_bit_z = 0;
+#endif
+
   // Enable steppers by resetting the stepper disable port
-#ifdef PRINTRBOARD
+#ifdef X_DISABLE_PORT
   X_DISABLE_PORT &= ~(1<<X_DISABLE_BIT);
   Y_DISABLE_PORT &= ~(1<<Y_DISABLE_BIT);
   Z_DISABLE_PORT &= ~(1<<Z_DISABLE_BIT);
 #else
   STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT);
-#endif // PRINTRBOARD
+#ifdef STEPPERS_DISABLE2_PORT
+  STEPPERS_DISABLE2_PORT &= ~(1<<STEPPERS_DISABLE2_BIT);
+#endif // STEPPERS_DISABLE2_PORT
+#endif // X_DISABLE_PORT
   // Enable stepper driver interrupt
   TIMSK1 |= (1<<OCIE1A);
 }
@@ -109,13 +123,16 @@ static void st_go_idle()
   #endif
   // Disable steppers by setting stepper disable
   // Enable steppers by resetting the stepper disable port
-#ifdef PRINTRBOARD
+#ifdef X_DISABLE_PORT
   X_DISABLE_PORT |= (1<<X_DISABLE_BIT);
   Y_DISABLE_PORT |= (1<<Y_DISABLE_BIT);
   Z_DISABLE_PORT |= (1<<Z_DISABLE_BIT);
 #else
   STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT);
-#endif // PRINTRBOARD
+#ifdef STEPPERS_DISABLE2_PORT
+  STEPPERS_DISABLE2_PORT |= (1<<STEPPERS_DISABLE2_BIT);
+#endif // STEPPERS_DISABLE2_PORT
+#endif // X_DISABLE_PORT
 }
 
 // Initializes the trapezoid generator from the current block. Called whenever a new 
@@ -150,10 +167,27 @@ ISR(TIMER1_COMPA_vect)
 {   
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
+#ifdef STEPPING_DDR
   // Set the direction pins a couple of nanoseconds before we step the steppers
   STEPPING_PORT = (STEPPING_PORT & ~DIRECTION_MASK) | (out_bits & DIRECTION_MASK);
   // Then pulse the stepping pins
   STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | out_bits;
+#else
+  // Set the direction pin a couple of nanoseconds before we step the steppers
+  X_DIRECTION_PORT = (X_DIRECTION_PORT & ~DIRECTION_MASK_X) | dir_bit_x;
+  // Then pulse the stepping pin
+  X_STEP_PORT = (X_STEP_PORT & ~STEP_MASK_X) | step_bit_x;
+
+  // Set the direction pins a couple of nanoseconds before we step the steppers
+  Y_DIRECTION_PORT = (Y_DIRECTION_PORT & ~DIRECTION_MASK_Y) | dir_bit_y;
+  // Then pulse the stepping pins
+  Y_STEP_PORT = (Y_STEP_PORT & ~STEP_MASK_Y) | step_bit_y;
+
+  // Set the direction pins a couple of nanoseconds before we step the steppers
+  Z_DIRECTION_PORT = (Z_DIRECTION_PORT & ~DIRECTION_MASK_Z) | dir_bit_z;
+  // Then pulse the stepping pins
+  Z_STEP_PORT = (Z_STEP_PORT & ~STEP_MASK_Z) | step_bit_z;
+#endif // STEPPING_DDR
   // Enable step pulse reset timer so that The Stepper Port Reset Interrupt can reset the signal after
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   TCNT2 = -(((settings.pulse_microseconds-2)*TICKS_PER_MICROSECOND) >> 3); // Reload timer counter
@@ -182,20 +216,41 @@ ISR(TIMER1_COMPA_vect)
 
   if (current_block != NULL) {
     // Execute step displacement profile by bresenham line algorithm
+#ifdef STEPPING_DDR
     out_bits = current_block->direction_bits;
+#else
+    dir_bit_x = current_block->direction_bits_x;
+    dir_bit_y = current_block->direction_bits_y;
+    dir_bit_z = current_block->direction_bits_z;
+    step_bit_x = 0;
+    step_bit_y = 0;
+    step_bit_z = 0;
+#endif
     counter_x += current_block->steps_x;
     if (counter_x > 0) {
+#ifdef STEPPING_DDR
       out_bits |= (1<<X_STEP_BIT);
+#else
+      step_bit_x = STEP_MASK_X;
+#endif
       counter_x -= current_block->step_event_count;
     }
     counter_y += current_block->steps_y;
     if (counter_y > 0) {
+#ifdef STEPPING_DDR
       out_bits |= (1<<Y_STEP_BIT);
+#else
+      step_bit_y = STEP_MASK_Y;
+#endif
       counter_y -= current_block->step_event_count;
     }
     counter_z += current_block->steps_z;
     if (counter_z > 0) {
+#ifdef STEPPING_DDR
       out_bits |= (1<<Z_STEP_BIT);
+#else
+      step_bit_z = STEP_MASK_X;
+#endif
       counter_z -= current_block->step_event_count;
     }
     
@@ -263,7 +318,9 @@ ISR(TIMER1_COMPA_vect)
       plan_discard_current_block();
     }
   }
+#ifdef STEPPING_DDR
   out_bits ^= settings.invert_mask;  // Apply stepper invert mask    
+#endif
   busy=false;
 }
 
@@ -274,7 +331,13 @@ ISR(TIMER1_COMPA_vect)
 ISR(TIMER2_OVF_vect)
 {
   // Reset stepping pins (leave the direction pins)
+#ifdef STEPPING_DDR
   STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | (settings.invert_mask & STEP_MASK); 
+#else
+  X_STEP_PORT &= ~STEP_MASK_X;
+  Y_STEP_PORT &= ~STEP_MASK_Y;
+  Z_STEP_PORT &= ~STEP_MASK_Z;
+#endif
   TCCR2B = 0; // Disable Timer2 to prevent re-entering this interrupt when it's not needed. 
 }
 
@@ -282,15 +345,33 @@ ISR(TIMER2_OVF_vect)
 void st_init()
 {
   // Configure directions of interface pins
+#ifdef STEPPING_DDR
   STEPPING_DDR |= STEPPING_MASK;
   STEPPING_PORT = (STEPPING_PORT & ~STEPPING_MASK) | settings.invert_mask;
-#ifdef PRINTRBOARD
+#else
+  X_STEP_DDR |= STEP_MASK_X;
+  X_STEP_PORT &= ~STEP_MASK_X;
+  X_DIRECTION_DDR |= DIRECTION_MASK_X;
+
+  Y_STEP_DDR |= STEP_MASK_Y;
+  Y_STEP_PORT &= ~STEP_MASK_Y;
+  Y_DIRECTION_DDR |= DIRECTION_MASK_Y;
+
+  Z_STEP_DDR |= STEP_MASK_Z;
+  Z_STEP_PORT &= ~STEP_MASK_Z;
+  Z_DIRECTION_DDR |= DIRECTION_MASK_Z;
+#endif // STEPPING_DDR
+
+#ifdef X_DISABLE_DDR
   X_DISABLE_DDR |= 1<<X_DISABLE_BIT;
   Y_DISABLE_DDR |= 1<<Y_DISABLE_BIT;
   Z_DISABLE_DDR |= 1<<Z_DISABLE_BIT;
 #else
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
-#endif // PRINTRBOARD
+#ifdef STEPPERS_DISABLE2_PORT
+  STEPPERS_DISABLE2_DDR |= 1<<STEPPERS_DISABLE2_BIT;
+#endif // STEPPERS_DISABLE2_PORT
+#endif // X_DISABLE_DDR
   
   // waveform generation = 0100 = CTC
   TCCR1B &= ~(1<<WGM13);

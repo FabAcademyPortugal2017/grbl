@@ -38,7 +38,13 @@ typedef struct {
   uint8_t pulse_microseconds;
   double default_feed_rate;
   double default_seek_rate;
+#ifdef STEPPING_DDR
   uint8_t invert_mask;
+#else
+  uint8_t invert_mask_x;
+  uint8_t invert_mask_y;
+  uint8_t invert_mask_z;
+#endif // STEPPING_DDR
   double mm_per_arc_segment;
 } settings_v1_t;
 
@@ -53,7 +59,13 @@ typedef struct {
 #define DEFAULT_FEEDRATE 500.0
 #define DEFAULT_ACCELERATION (DEFAULT_FEEDRATE*60*60/10.0) // mm/min^2
 #define DEFAULT_JUNCTION_DEVIATION 0.05 // mm
+#ifdef STEPPING_DDR
 #define DEFAULT_STEPPING_INVERT_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT))
+#else
+#define DEFAULT_STEPPING_INVERT_MASK_X (1<<X_STEP_BIT)
+#define DEFAULT_STEPPING_INVERT_MASK_Y (1<<Y_STEP_BIT)
+#define DEFAULT_STEPPING_INVERT_MASK_Z (1<<Z_STEP_BIT)
+#endif // STEPPING_DDR
 
 void settings_reset() {
   settings.steps_per_mm[X_AXIS] = DEFAULT_X_STEPS_PER_MM;
@@ -64,7 +76,13 @@ void settings_reset() {
   settings.default_seek_rate = DEFAULT_RAPID_FEEDRATE;
   settings.acceleration = DEFAULT_ACCELERATION;
   settings.mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT;
+#ifdef STEPPING_DDR
   settings.invert_mask = DEFAULT_STEPPING_INVERT_MASK;
+#else
+  settings.invert_mask_x = DEFAULT_STEPPING_INVERT_MASK_X;
+  settings.invert_mask_y = DEFAULT_STEPPING_INVERT_MASK_Y;
+  settings.invert_mask_z = DEFAULT_STEPPING_INVERT_MASK_Z;
+#endif // STEPPING_DDR
   settings.junction_deviation = DEFAULT_JUNCTION_DEVIATION;
 }
 
@@ -76,8 +94,26 @@ void settings_dump() {
   printPgmString(PSTR(" (microseconds step pulse)\r\n$4 = ")); printFloat(settings.default_feed_rate);
   printPgmString(PSTR(" (mm/min default feed rate)\r\n$5 = ")); printFloat(settings.default_seek_rate);
   printPgmString(PSTR(" (mm/min default seek rate)\r\n$6 = ")); printFloat(settings.mm_per_arc_segment);
-  printPgmString(PSTR(" (mm/arc segment)\r\n$7 = ")); printInteger(settings.invert_mask); 
-  printPgmString(PSTR(" (step port invert mask. binary = ")); printIntegerInBase(settings.invert_mask, 2);  
+  printPgmString(PSTR(" (mm/arc segment)\r\n$7 = "));
+#ifdef STEPPING_DDR
+ printInteger(settings.invert_mask); 
+#else
+ printInteger(settings.invert_mask_x); 
+ printPgmString(PSTR(","));
+ printInteger(settings.invert_mask_y); 
+ printPgmString(PSTR(","));
+ printInteger(settings.invert_mask_z); 
+#endif
+  printPgmString(PSTR(" (step port invert mask. binary = "));
+#ifdef STEPPING_DDR
+ printIntegerInBase(settings.invert_mask, 2);  
+#else
+ printIntegerInBase(settings.invert_mask_x, 2);
+ printPgmString(PSTR(","));
+ printIntegerInBase(settings.invert_mask_y, 2);  
+ printPgmString(PSTR(","));
+ printIntegerInBase(settings.invert_mask_z, 2);  
+#endif
   printPgmString(PSTR(")\r\n$8 = ")); printFloat(settings.acceleration/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (acceleration in mm/sec^2)\r\n$9 = ")); printFloat(settings.junction_deviation);
   printPgmString(PSTR(" (cornering junction deviation in mm)"));
@@ -195,7 +231,9 @@ void settings_store_setting(int parameter, double value) {
     case 4: settings.default_feed_rate = value; break;
     case 5: settings.default_seek_rate = value; break;
     case 6: settings.mm_per_arc_segment = value; break;
+#ifdef STEPPING_DDR
     case 7: settings.invert_mask = trunc(value); break;
+#endif
     case 8: settings.acceleration = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 9: settings.junction_deviation = fabs(value); break;
     default: 
