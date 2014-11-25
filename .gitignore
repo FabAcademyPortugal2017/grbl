@@ -1,7 +1,6 @@
 *~
 *.bak
 archive/*
-*.hex
 *.o
 *.elf
 *.DS_Store
